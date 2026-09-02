@@ -1,0 +1,8 @@
+# Python environment and cache
+__pycache__/
+.venv/
+env/
+*.pyc
+
+# Model checkpoints
+*.pth

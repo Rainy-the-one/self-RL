@@ -1,0 +1,5 @@
+gymnasium>=0.29.1
+gymnasium[classic-control]
+gymnasium[toy-text]
+torch>=2.0.0
+numpy>=1.24.0
