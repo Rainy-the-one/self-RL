@@ -15,11 +15,12 @@ When environments have massive or continuous state spaces, tabular methods (Q-Ta
 * **`day8_qnetwork.py`**: Introduction to PyTorch tensors, autograd, and building a basic `Q-Network` architecture to evaluate states in the `CartPole-v1` environment.
 * **`day10_dqn.py`**: Full implementation of **Deep Q-Networks (DQN)** featuring a custom `ReplayBuffer`, `main_net`, `target_net`, and Epsilon-Greedy decay to solve CartPole.
 
+## 🚀 How to Run
 Navigate to this folder and run any script directly using Python like these examples:
 ```bash
 python day10_dqn.py
 ``` 
 or
 ```bash
-python week2_deep_q_learning/day5_qlearning.py
+python week2_deep_q_learning/day10_dqn.py
 ```
