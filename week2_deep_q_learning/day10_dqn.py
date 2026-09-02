@@ -6,7 +6,7 @@ import numpy as np
 import random
 from collections import deque
 
-# 1. Cấu trúc Mạng Nơ-ron (Não bộ)
+# 1. Define the Q-Network Architecture
 class QNetwork(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(QNetwork, self).__init__()
@@ -19,7 +19,7 @@ class QNetwork(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
-# 2. Replay Buffer (Nhật ký kinh nghiệm)
+# 2. Define the Replay Buffer for Experience Replay
 class ReplayBuffer:
     def __init__(self, capacity=10000):
         self.buffer = deque(maxlen=capacity)
@@ -39,14 +39,14 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-# 3. Khởi tạo môi trường và Hyperparameters
+# 3. Initialize Environment and Hyperparameters
 env = gym.make("CartPole-v1")
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.n
 
 main_net = QNetwork(state_dim, action_dim)
 target_net = QNetwork(state_dim, action_dim)
-target_net.load_state_dict(main_net.state_dict()) # Copy tủy não ban đầu
+target_net.load_state_dict(main_net.state_dict())  # Copy initial weights to target network
 
 optimizer = optim.Adam(main_net.parameters(), lr=0.0005)
 memory = ReplayBuffer()
@@ -58,16 +58,16 @@ epsilon_decay = 0.995
 epsilon_min = 0.01
 target_update_freq = 10
 
-print("Đang huấn luyện DQN... (Quá trình này tốn khoảng 1-2 phút)")
+print("Training DQN... (This will take about 1-2 minutes)")
 
-# 4. Vòng lặp huấn luyện
+# 4. Training Loop
 for episode in range(500):
     state, _ = env.reset()
     total_reward = 0
     done = False
     
     while not done:
-        # Chọn hành động Epsilon-Greedy
+        # Epsilon-greedy action selection
         if random.random() < epsilon:
             action = env.action_space.sample()
         else:
@@ -75,27 +75,28 @@ for episode in range(500):
                 q_values = main_net(torch.FloatTensor(state))
                 action = torch.argmax(q_values).item()
         
-        # Tương tác môi trường
+        # Interact with the environment
         next_state, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
         total_reward += reward
         
-        # Lưu vào nhật ký
+        # Store transition in replay buffer
         memory.push(state, action, reward, next_state, done)
         state = next_state
         
-        # Học từ nhật ký (khi đã gom đủ dữ liệu)
+        # Learn from experiences if enough samples are gathered
         if len(memory) > batch_size:
             states, actions, rewards, next_states, dones = memory.sample(batch_size)
             
-            # Tính Q hiện tại
+            # Compute current Q values
             current_q = main_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-            # Tính Q mục tiêu từ Target Net
+            
+            # Compute target Q values using target network
             with torch.no_grad():
                 max_next_q = target_net(next_states).max(1)[0]
                 target_q = rewards + gamma * max_next_q * (1 - dones)
             
-            # Tính Loss và cập nhật trọng số
+            # Compute loss and update weights via gradient descent
             loss = nn.MSELoss()(current_q, target_q)
             optimizer.zero_grad()
             loss.backward()
@@ -103,18 +104,19 @@ for episode in range(500):
             
     epsilon = max(epsilon_min, epsilon * epsilon_decay)
     
-    # Cập nhật Mạng Mục tiêu (Copy trọng số từ não chính sang)
+    # Update target network weights periodically
     if episode % target_update_freq == 0:
         target_net.load_state_dict(main_net.state_dict())
         
     if episode % 10 == 0:
         print(f"Episode {episode}, Total Reward: {total_reward}, Epsilon: {epsilon:.2f}")
 
-# 5. Kiểm tra AI với đồ họa
-print("\nBắt đầu chạy thử nghiệm...")
+# 5. Test the Trained Agent with Visual Rendering
+print("\nStarting test simulation...")
 env_test = gym.make("CartPole-v1", render_mode="human")
 state, _ = env_test.reset()
 done = False
+
 while not done:
     with torch.no_grad():
         q_values = main_net(torch.FloatTensor(state))

@@ -3,39 +3,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import gymnasium as gym
 
-# 1. Khởi tạo môi trường CartPole
+# 1. Initialize the CartPole environment
 env = gym.make("CartPole-v1")
-state_dim = env.observation_space.shape[0] # Input: 4 thông số (vị trí, vận tốc, góc, vận tốc góc)
-action_dim = env.action_space.n            # Output: 2 hành động (Đẩy trái, Đẩy phải)
+state_dim = env.observation_space.shape[0]  # Input: 4 state features (position, velocity, angle, angular velocity)
+action_dim = env.action_space.n             # Output: 2 discrete actions (Push left, Push right)
 
-# 2. Xây dựng cấu trúc Mạng Nơ-ron (Q-Network)
+# 2. Define the Q-Network architecture
 class QNetwork(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(QNetwork, self).__init__()
-        # Lớp ẩn thứ nhất (từ 4 input -> 64 nơ-ron)
+        # First hidden layer (4 inputs -> 64 neurons)
         self.fc1 = nn.Linear(state_dim, 64)
-        # Lớp ẩn thứ hai (từ 64 -> 64 nơ-ron)
+        # Second hidden layer (64 -> 64 neurons)
         self.fc2 = nn.Linear(64, 64)
-        # Lớp đầu ra (từ 64 -> 2 Q-values cho 2 action)
+        # Output layer (64 -> 2 Q-values for 2 actions)
         self.fc3 = nn.Linear(64, action_dim)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x)) # Hàm kích hoạt ReLU giúp mạng học được các logic phi tuyến tính
+        x = F.relu(self.fc1(x))  # ReLU activation for non-linearity
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)         # Output không dùng hàm kích hoạt vì Q-value có thể là số âm/dương bất kỳ
+        x = self.fc3(x)          # Raw outputs since Q-values can be any real number
         return x
 
-# 3. Khởi tạo bộ não
+# 3. Initialize the neural network model
 brain = QNetwork(state_dim, action_dim)
 print(brain)
 
-# 4. Thử nghiệm "chạy" một trạng thái qua não
+# 4. Test a forward pass with an initial state
 state, _ = env.reset()
-# PyTorch yêu cầu input phải là dạng Tensor (ma trận của Torch)
-state_tensor = torch.FloatTensor(state) 
+state_tensor = torch.FloatTensor(state)  # Convert state numpy array to PyTorch Tensor
 
-# Đưa state vào mạng nơ-ron để dự đoán Q-values
+# Pass the tensor through the network to get predicted Q-values
 q_values = brain(state_tensor)
 
-print("\nState hiện tại:", state)
-print("Q-values dự đoán cho (Trái, Phải):", q_values.detach().numpy())
+print("\nCurrent State:", state)
+print("Predicted Q-values for actions (Left, Right):", q_values.detach().numpy())
+env.close()
