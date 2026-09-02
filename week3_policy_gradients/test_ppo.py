@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# 1. Định nghĩa lại bộ não PPO
+# 1. Define the PPO Actor-Critic Network Architecture
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(ActorCritic, self).__init__()
@@ -17,19 +17,19 @@ class ActorCritic(nn.Module):
         state_value = self.critic(x)
         return action_probs, state_value
 
-print("\nĐang khởi động Agent PPO vô địch...")
+print("\nStarting the champion PPO Agent...")
 
-# 2. Khởi tạo môi trường đồ họa
+# 2. Initialize environment with visual rendering
 env = gym.make("CartPole-v1", render_mode="human")
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.n
 
-# 3. Nạp "Linh hồn" vào
+# 3. Load the model and its trained weights
 model = ActorCritic(state_dim, action_dim)
 model.load_state_dict(torch.load("ppo_best.pth"))
-model.eval() # Bật chế độ đi thi
+model.eval()  # Set model to evaluation mode
 
-# 4. Biểu diễn
+# 4. Run test simulation loop
 state, _ = env.reset()
 done = False
 total_reward = 0
@@ -39,12 +39,12 @@ while not done:
     
     with torch.no_grad():
         action_probs, _ = model(state_tensor)
-        # Bỏ gieo xúc xắc, chọn luôn hành động tự tin nhất
+        # Choose the most confident action (greedy selection instead of sampling)
         action = torch.argmax(action_probs).item()
         
     state, reward, terminated, truncated, _ = env.step(action)
     done = terminated or truncated
     total_reward += reward
 
-print(f"Hoàn thành xuất sắc! Tổng điểm: {total_reward}")
+print(f"Simulation completed successfully! Total Score: {total_reward}")
 env.close()
