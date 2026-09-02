@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.distributions import Categorical
 import numpy as np
 
-# 1. Cấu trúc Não bộ (Đầu ra Softmax)
+# 1. Define the Policy Network Architecture (Softmax Output)
 class PolicyNetwork(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(PolicyNetwork, self).__init__()
@@ -43,7 +43,7 @@ def update_policy(optimizer, log_probs, rewards, gamma=0.99):
     sum(policy_loss).backward()
     optimizer.step()
 
-# 2. Khởi tạo môi trường
+# 2. Initialize Environment and Model
 env = gym.make("CartPole-v1")
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.n
@@ -51,9 +51,9 @@ action_dim = env.action_space.n
 policy_net = PolicyNetwork(state_dim, action_dim)
 optimizer = optim.Adam(policy_net.parameters(), lr=0.01)
 
-print("Đang huấn luyện REINFORCE...")
+print("Training REINFORCE...")
 
-# 3. Vòng lặp huấn luyện (Đánh giá trọn vẹn ván game)
+# 3. Training Loop (Monte Carlo evaluation at the end of each episode)
 for episode in range(500):
     state, _ = env.reset()
     log_probs = []
@@ -71,14 +71,14 @@ for episode in range(500):
         total_reward += reward
         state = next_state
         
-    # Cập nhật Mạng nơ-ron SAU KHI ván game kết thúc
+    # Update network weights AFTER the episode terminates
     update_policy(optimizer, log_probs, rewards)
     
     if episode % 50 == 0:
         print(f"Episode {episode}, Total Reward: {total_reward}")
 
-# 4. Kiểm tra thực tế
-print("\nBắt đầu chạy thử nghiệm...")
+# 4. Test the Trained Agent
+print("\nStarting test simulation...")
 env_test = gym.make("CartPole-v1", render_mode="human")
 state, _ = env_test.reset()
 done = False

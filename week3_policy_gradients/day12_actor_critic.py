@@ -27,7 +27,16 @@ optimizer = optim.Adam(model.parameters(), lr=0.002)
 gamma = 0.99
 best_reward = 0
 
-print("Đang huấn luyện Actor-Critic (Bản nâng cấp ổn định)...")
+# ==============================================================================
+# TOGGLE BETWEEN THE ORIGINAL AND STABILIZED VERSIONS:
+# ==============================================================================
+USE_STABILIZED_VERSION = True  # True: Stabilized version | False: Original version
+
+if not USE_STABILIZED_VERSION:
+    print(">>> Running: ORIGINAL Actor-Critic (Prone to high variance and policy collapse)...")
+else:
+    print(">>> Running: STABILIZED Actor-Critic (With Loss Balancing, Entropy & Gradient Clipping)...")
+
 
 for episode in range(1000):
     state, _ = env.reset()
@@ -45,40 +54,58 @@ for episode in range(1000):
         done = terminated or truncated
         total_reward += reward
         
-        if done and total_reward < 500:
-            reward = -10 
-
         next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0)
         _, next_state_value = model(next_state_tensor)
         
         td_target = reward + gamma * next_state_value * (1 - int(done))
         advantage = td_target - state_value
         
-        # ==========================================
-        # 3 TẤM KHIÊN BẢO VỆ ĐÃ ĐƯỢC TÍCH HỢP
-        # ==========================================
-        critic_loss = F.mse_loss(state_value, td_target.detach())
-        actor_loss = -m.log_prob(action) * advantage.detach()
-        entropy = m.entropy() # Tấm khiên 2: Khuyến khích tò mò
-        
-        # Tấm khiên 1: Cân bằng trọng số Loss
-        total_loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy
-        
-        optimizer.zero_grad()
-        total_loss.backward()
-        
-        # Tấm khiên 3: Trói buộc đạo hàm (Gradient Clipping)
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
+        # ----------------------------------------------------------------------
+        # BLOCK 1: ORIGINAL VERSION
+        # Lacks reward shaping, loss balancing, entropy, and clipping. 
+        # Often suffers from high variance and sudden training instability.
+        # ----------------------------------------------------------------------
+        if not USE_STABILIZED_VERSION:
+            actor_loss = -m.log_prob(action) * advantage.detach()
+            critic_loss = F.mse_loss(state_value, td_target.detach())
+            total_loss = actor_loss + critic_loss
+            
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+            
+        # ----------------------------------------------------------------------
+        # BLOCK 2: STABILIZED VERSION (3 SHIELDS)
+        # - Negative reward shaping (-10) upon failing early to learn failure boundaries.
+        # - Balanced loss weights (0.5 for critic) + Entropy bonus for exploration.
+        # - Gradient Clipping (max_norm=1.0) to prevent exploding gradients.
+        # ----------------------------------------------------------------------
+        else:
+            if done and total_reward < 500:
+                reward = -10  # Negative penalty for premature failure
+
+            critic_loss = F.mse_loss(state_value, td_target.detach())
+            actor_loss = -m.log_prob(action) * advantage.detach()
+            entropy = m.entropy()  # Shield 2: Encourages exploration
+            
+            # Shield 1: Weighted loss combination
+            total_loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy
+            
+            optimizer.zero_grad()
+            total_loss.backward()
+            
+            # Shield 3: Gradient Clipping to prevent exploding gradients
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
         
         state = next_state
         
     if total_reward > best_reward:
         best_reward = total_reward
-        print(f"Kỷ lục mới ở ván {episode}: {best_reward} điểm! Đã lưu.")
+        print(f"New record at episode {episode}: {best_reward} points! Model saved.")
         torch.save(model.state_dict(), "actor_critic_best.pth")
 
     if episode % 50 == 0:
         print(f"Episode {episode}, Total Reward: {total_reward}")
 
-print("\nHuấn luyện xong!")
+print("\nTraining complete!")
