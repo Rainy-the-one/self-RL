@@ -18,6 +18,13 @@ cd <your_repo_name>
 pip install -r requirements.txt
 ```
 
+## 💡 Friendly Reminder: 
+If you plan to make modifications, experiment with hyper-parameters, or add your own code, it is strongly recommended to create a new branch rather than pushing directly to the `main` branch to keep the `main` branch clean and stable:
+```bash
+git checkout -b feature/my-experiments # Feel free to name your branch anything you prefer
+```
+
+
 ## 🗺️ Curriculum Roadmap
 
 ### Week 1: Core Foundations (Tabular RL)
